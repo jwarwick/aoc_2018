@@ -8,6 +8,6 @@ fn main() {
     let result = day01::calibrate_from_file(&filename);
     println!("Part 1 Result: {}", result);
 
-    //let result = day01::rotated_captcha_from_file(&filename);
-    //println!("Part 2 Result: {}", result);
+    let result = day01::duplicate_from_file(&filename);
+    println!("Part 2 Result: {}", result);
 }
