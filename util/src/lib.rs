@@ -20,20 +20,20 @@ pub fn string_to_digits(input: &str) -> Vec<u32> {
     digits
 }
 
-pub fn string_to_numbers(input: &str) -> Vec<u32> {
+pub fn string_to_numbers(input: &str) -> Vec<i32> {
     let input = input.trim();
-    let mut output: Vec<u32> = Vec::new();
+    let mut output: Vec<i32> = Vec::new();
     let words = input.split_whitespace();
     for word in words {
-        let num: u32 = word.parse().expect("Couldn't parse number");
+        let num: i32 = word.parse().expect("Couldn't parse number");
         output.push(num);
     }
     output
 }
 
-pub fn string_to_numbers_vec(input: &str) -> Vec<Vec<u32>> {
+pub fn string_to_numbers_vec(input: &str) -> Vec<Vec<i32>> {
     let input = input.trim();
-    let mut output: Vec<Vec<u32>> = Vec::new();
+    let mut output: Vec<Vec<i32>> = Vec::new();
     let lines = input.lines();
     for line in lines {
         let v = string_to_numbers(line);
@@ -54,13 +54,13 @@ mod tests {
 
     #[test]
     fn str_to_numbers() {
-        let input = "1 2 3";
-        assert_eq!(vec![1, 2, 3], string_to_numbers(input))
+        let input = "1 2 3 -4";
+        assert_eq!(vec![1, 2, 3, -4], string_to_numbers(input))
     }
 
     #[test]
     fn str_to_vec() {
-        let input = "1 2 3\n4 5 6";
-        assert_eq!(vec![vec![1, 2, 3], vec![4, 5, 6]], string_to_numbers_vec(input))
+        let input = "1 2 3 -4\n4 -5 6";
+        assert_eq!(vec![vec![1, 2, 3, -4], vec![4, -5, 6]], string_to_numbers_vec(input))
     }
 }
