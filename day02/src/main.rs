@@ -10,6 +10,6 @@ fn main() {
     let result1 = day02::checksum(&input);
     println!("Part 1 Result: {}", result1);
 
-    //let result = day01::duplicate_from_file(&filename);
-    //println!("Part 2 Result: {}", result);
+    let result2 = day02::common_letters(&input);
+    println!("Part 2 Result: {}", result2);
 }
