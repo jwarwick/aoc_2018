@@ -2,8 +2,8 @@ extern crate util;
 #[macro_use] extern crate itertools;
 #[macro_use] extern crate scan_fmt;
 
-use itertools::Itertools;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 #[derive(Debug, PartialEq)]
 pub struct Rect {
@@ -44,7 +44,7 @@ fn parse_line(line: &str) -> Rect {
     Rect {id, x, y, w, h}
 }
 
-pub fn overlapped_area(input: &Vec<Rect>) -> usize {
+pub fn overlapped_area(input: &Vec<Rect>) -> (usize, i32) {
     let mut all_points = HashMap::new();
     for r in input {
         let points = r.points();
@@ -53,15 +53,30 @@ pub fn overlapped_area(input: &Vec<Rect>) -> usize {
             *counter += 1;
         }
     }
-    //println!("All Points: {:?}", all_points);
-    //let some_points: Vec<((i32, i32), i64)> = all_points
-    all_points
+    let overlapped: Vec<((i32, i32), i64)> =
+        all_points
         .into_iter()
         .filter(|&(_, v)| v != 1)
-        .count()
-    //    .collect();
-    //println!("Some Points: {:?}", some_points);
-    //some_points.iter().count()
+        .collect();
+
+    let overlapped_points: HashSet<(i32, i32)> =
+        overlapped
+        .clone()
+        .into_iter()
+        .map(|(k, _)| k)
+        .collect();
+
+    let mut free_idx = 0;
+    for r in input {
+        let vec_points = r.points();
+        let r_points: HashSet<_> = vec_points.iter().cloned().collect();
+        if overlapped_points.is_disjoint(&r_points) {
+            free_idx = r.id;
+            break;
+        }
+    }
+
+    (overlapped.iter().count(), free_idx)
 }
 
 #[cfg(test)]
@@ -96,6 +111,15 @@ mod tests {
     fn overlap() {
         let input ="#1 @ 1,3: 4x4\n#2 @ 3,1: 4x4\n #3 @ 5,5: 2x2";
         let rects = parse_string(&input);
-        assert_eq!(overlapped_area(&rects), 4);
+        let (area, _idx) = overlapped_area(&rects);
+        assert_eq!(area, 4);
+    }
+
+    #[test]
+    fn unused_idx() {
+        let input ="#1 @ 1,3: 4x4\n#2 @ 3,1: 4x4\n #3 @ 5,5: 2x2";
+        let rects = parse_string(&input);
+        let (_area, idx) = overlapped_area(&rects);
+        assert_eq!(idx, 3);
     }
 }
