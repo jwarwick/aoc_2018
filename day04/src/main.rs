@@ -9,5 +9,7 @@ fn main() {
 
     let result1 = day04::strategy1(&input);
     println!("Part 1 Result: {}", result1);
-    //println!("Part 2 Result: {}", idx);
+
+    let result2 = day04::strategy2(&input);
+    println!("Part 2 Result: {}", result2);
 }

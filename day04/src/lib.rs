@@ -101,7 +101,6 @@ pub fn strategy1(input: &Vec<Nap>) -> usize {
         let counter = guards.entry(nap.guard).or_insert(0);
         *counter += nap.duration;
     }
-    //let all: Vec<_> = guards.iter().collect();
     let (guard, _duration): (&i32, &i32) = guards.iter().max_by(|(_k1, v1), (_k2, v2)| v1.cmp(&v2)).unwrap();
     let guard_naps: Vec<&Nap> = input.iter().filter(|n| *guard == n.guard).collect();
     let mut minutes: [i32; 60] = [0; 60];
@@ -112,6 +111,24 @@ pub fn strategy1(input: &Vec<Nap>) -> usize {
     }
     let (_max_value, max_idx) = minutes.iter().enumerate().map(|(a, b)| (b, a)).max().unwrap();
     max_idx * (*guard as usize)
+}
+
+pub fn strategy2(input: &Vec<Nap>) -> usize {
+    let mut guards: HashMap<i32, [i32; 60]> = HashMap::new();
+    for nap in input {
+        let times = guards.entry(nap.guard).or_insert([0; 60]);
+        for m in nap.start .. nap.end {
+            times[m as usize] += 1;
+        }
+    }
+
+    let mut max_mins: Vec<(i32, i32, usize)> = Vec::new();
+    for (guard_id, times) in guards.iter() {
+        let (max_value, max_idx) = times.iter().enumerate().map(|(a, b)| (b, a)).max().unwrap();
+        max_mins.push((*max_value, *guard_id, max_idx));
+    }
+    let (_max_value, guard_id, max_time) = max_mins.iter().max().unwrap();
+    max_time * (*guard_id as usize)
 }
 
 #[cfg(test)]
@@ -162,8 +179,14 @@ mod tests {
     }
 
     #[test]
-    fn test_start1() {
+    fn test_strat1() {
         let input = parse_file("test_input.txt");
         assert_eq!(240, strategy1(&input));
+    }
+
+    #[test]
+    fn test_strat2() {
+        let input = parse_file("test_input.txt");
+        assert_eq!(4455, strategy2(&input));
     }
 }
