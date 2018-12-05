@@ -6,3 +6,10 @@ authors = ["John Warwick <jwarwick@gmail.com>"]
 [dependencies]
 util = {path = "../util"}
 itertools = "0.7.9"
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+name = "my_benchmark"
+harness = false

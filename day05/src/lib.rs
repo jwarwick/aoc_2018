@@ -13,7 +13,7 @@ pub fn best_polymer_count(s: &str) -> usize {
     let mut sizes: Vec<usize> = Vec::new();
     for u in uniq {
         let u_up = u.to_ascii_uppercase();
-        let filtered: Vec<char> = chars.clone().iter().filter(|&x| *x != u && *x != u_up).map(|x| *x).collect();
+        let filtered: Vec<char> = chars.iter().filter(|&x| *x != u && *x != u_up).cloned().collect();
         let r = one_pass(filtered);
         sizes.push(r.iter().count());
     }
