@@ -10,8 +10,9 @@ pub fn get_argument(default: &str) -> String {
 }
 
 pub fn string_from_file(filename: &str) -> String {
-    fs::read_to_string(filename)
-        .expect("Something went wrong reading the input file")
+    let s = fs::read_to_string(filename)
+        .expect("Something went wrong reading the input file");
+    s.trim().to_string()
 }
 
 pub fn string_to_digits(input: &str) -> Vec<u32> {

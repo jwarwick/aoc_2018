@@ -1,9 +1,23 @@
 extern crate util;
 
+use std::collections::HashSet;
+
 pub fn react_count(s: &str) -> usize {
-    let trimmed = s.trim();
-    let reacted = react(trimmed);
+    let reacted = react(s);
     reacted.iter().count()
+}
+
+pub fn best_polymer_count(s: &str) -> usize {
+    let chars: Vec<char> = s.chars().collect();
+    let uniq: HashSet<char> = chars.iter().map(|x| x.to_ascii_lowercase()).collect();
+    let mut sizes: Vec<usize> = Vec::new();
+    for u in uniq {
+        let u_up = u.to_ascii_uppercase();
+        let filtered: Vec<char> = chars.clone().iter().filter(|&x| *x != u && *x != u_up).map(|x| *x).collect();
+        let r = one_pass(filtered);
+        sizes.push(r.iter().count());
+    }
+    *sizes.iter().min().expect("No minimum")
 }
 
 fn react(s: &str) -> Vec<char> {
@@ -80,5 +94,11 @@ mod tests {
     fn longer_count() {
         let input = "dabAcCaCBAcCcaDA";
         assert_eq!(10, react_count(&input));
+    }
+
+    #[test]
+    fn best_polymer() {
+        let input = "dabAcCaCBAcCcaDA";
+        assert_eq!(4, best_polymer_count(&input));
     }
 }
