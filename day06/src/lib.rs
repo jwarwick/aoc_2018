@@ -1,6 +1,8 @@
 extern crate util;
+extern crate itertools;
 #[macro_use] extern crate scan_fmt;
 
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
@@ -22,6 +24,25 @@ impl FromStr for Point {
             x: x.unwrap(),
             y: y.unwrap(),
         })
+    }
+}
+
+impl Point {
+    fn distance(&self, pt: &Point) -> i32 {
+        (self.x - pt.x).abs() + (self.y - pt.y).abs()
+    }
+
+    fn total_distance(&self, pts: &Vec<Point>) -> i32 {
+        pts.iter().map(|x| x.distance(self)).sum()
+    }
+
+    fn neighbors(&self) -> Vec<Point> {
+        let mut n = Vec::new();
+        n.push(Point {x: self.x, y: self.y - 1});
+        n.push(Point {x: self.x, y: self.y + 1});
+        n.push(Point {x: self.x - 1, y: self.y});
+        n.push(Point {x: self.x + 1, y: self.y});
+        n
     }
 }
 
@@ -47,6 +68,41 @@ impl Location {
 struct Node {
     closest: i32,
     distance: usize,
+}
+
+pub fn safe_region(s: &str, cutoff: i32) -> i32 {
+    let mut givens: Vec<Point> = Vec::new();
+    for loc_str in s.lines() {
+        let pt: Point = loc_str.parse().expect("Not a location string");
+        givens.push(pt);
+    }
+
+    let center = get_center(&givens);
+
+    let mut valid: HashSet<Point> = HashSet::new();
+    let mut seen: HashSet<Point> = HashSet::new();
+    let mut queue: VecDeque<Point> = VecDeque::new();
+    queue.push_back(center);
+
+    while let Some(p) = queue.pop_front() {
+        seen.insert(p);
+        if p.total_distance(&givens) < cutoff {
+            valid.insert(p);
+            let neighbors = p.neighbors();
+            for n in neighbors {
+                if !seen.contains(&n) && !queue.contains(&n) {
+                    queue.push_back(n);
+                }
+            }
+        }
+    }
+    valid.iter().count() as i32
+}
+
+fn get_center(pts: &Vec<Point>) -> Point {
+    let (x_min, x_max) = pts.iter().map(|p| p.x).minmax().into_option().unwrap();
+    let (y_min, y_max) = pts.iter().map(|p| p.y).minmax().into_option().unwrap();
+    Point{x: (x_max - x_min)/2, y: (y_max - y_min)/2}
 }
 
 pub fn largest_area(s: &str) -> i32 {
@@ -118,5 +174,11 @@ mod tests {
     fn sample() {
         let input = "1, 1\n1, 6\n8, 3\n3, 4\n5, 5\n8, 9";
         assert_eq!(largest_area(&input), 17);
+    }
+
+    #[test]
+    fn safe() {
+        let input = "1, 1\n1, 6\n8, 3\n3, 4\n5, 5\n8, 9";
+        assert_eq!(safe_region(&input, 32), 16);
     }
 }

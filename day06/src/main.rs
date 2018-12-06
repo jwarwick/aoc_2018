@@ -10,6 +10,6 @@ fn main() {
     let result1 = day06::largest_area(&contents);
     println!("Part 1 Result: {}", result1);
 
-    //let result2 = day06::best_polymer_count(&contents);
-    //println!("Part 2 Result: {}", result2);
+    let result2 = day06::safe_region(&contents, 10000);
+    println!("Part 2 Result: {}", result2);
 }
