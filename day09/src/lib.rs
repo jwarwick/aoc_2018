@@ -1,64 +1,65 @@
 extern crate util;
 
-use std::collections::VecDeque;
+use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
-struct Game {
-    marbles: VecDeque<u32>,
-    curr: usize,
-    scores: Vec<u32>,
+#[derive(Debug, Clone, Copy)]
+struct Marble {
+    value: u32,
+    next: u32,
+    prev: u32,
 }
 
 fn play(players: &u32, last_value: &u32) -> Vec<u32> {
-    let mut marbles: VecDeque<u32> = VecDeque::with_capacity(1 + *last_value as usize);
-    let mut curr: usize = 0;
+    println!("Players: {}, Last Value: {}", players, last_value);
+    let mut marbles: HashMap<u32, Marble> = HashMap::with_capacity(*last_value as usize + 1);
+    let mut curr = Marble {value: 0, next: 0, prev: 0};
     let mut cnt: usize = 0;
     let mut scores: Vec<u32> = vec![0; *players as usize];
 
-    marbles.insert(0, 0);
+    marbles.insert(0, curr);
     cnt += 1;
-    println!("{}:\t{:?}", curr, marbles);
 
     while cnt <= *last_value as usize {
-        let marble_cnt = marbles.len();
         if 0 == cnt % 23 {
-            let mut take_idx: isize = curr as isize - 7;
-            if take_idx < 0 {
-                take_idx = (marble_cnt as isize) + take_idx;
+            let mut take_val = curr.prev;
+            for _ in 0..6 {
+                take_val = marbles[&take_val].prev;
             }
-            let value = marbles.remove(take_idx as usize).expect("Removable item");
-            let player: usize = ((cnt + 1) % *players as usize);
-            scores[player] += (cnt as u32) + value;
+            let take = marbles.remove(&take_val).expect("Node to remove");
+            {
+                let prev_node = marbles.get_mut(&take.prev).unwrap();
+                prev_node.next = take.next;
+            }
+            {
+                let next_node = marbles.get_mut(&take.next).unwrap();
+                next_node.prev = take.prev;
+                curr = next_node.clone();
+            }
 
-            curr = take_idx as usize;
-            if curr > marbles.len() {
-                curr = curr - marbles.len();
-            }
+            let player: usize = ((cnt + 1) % *players as usize);
+            scores[player] += (cnt as u32) + take.value;
+
         } else {
-            let mut new_idx = curr + 2;
-            if new_idx > marble_cnt {
-                new_idx = new_idx - marble_cnt;
+            let next = marbles[&curr.next].next;
+            let prev = curr.next;
+            let value: u32 = cnt as u32;
+            {
+                let prev_node = marbles.get_mut(&prev).unwrap();
+                prev_node.next = value;
             }
-            marbles.insert(new_idx, cnt as u32);
-            curr = new_idx;
+            {
+                let next_node = marbles.get_mut(&next).unwrap();
+                next_node.prev = value;
+            }
+            curr = Marble {value, next, prev};
+            marbles.insert(cnt as u32, curr);
         }
         
-        //print_state(&curr, &marbles);
+        //println!("{:#?}", marbles);
         cnt += 1;
     }
 
     scores
-}
-
-fn print_state(curr: &usize, marbles: &VecDeque<u32>) {
-    for (idx, val) in marbles.iter().enumerate() {
-        if *curr == idx {
-            print!("({}) ", val);
-        } else {
-            print!("{} ", val);
-        }
-    }
-    print!("\n");
 }
 
 pub fn high_score(players: u32, last_value: u32) -> u32 {
@@ -73,8 +74,8 @@ mod tests {
     #[test]
     fn ex1() {
         assert_eq!(high_score(9, 25), 32);
-
     }
+
     #[test]
     fn part1_examples() {
         assert_eq!(high_score(10, 1618), 8317);
