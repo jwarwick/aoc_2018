@@ -77,15 +77,18 @@ pub fn simulate(contents: &str, steps: &usize) -> usize {
     let mut lights = Sky::new(contents);
     let mut area: Vec<(usize, usize)> = Vec::with_capacity(*steps);
 
+    let mut cnt = 0;
     for idx in 0..*steps {
         let bb = lights.step();
         area.push((bb, idx));
+        cnt += 1;
     }
 
     lights.print();
     //println!("Areas: {:?}", area);
     let min = area.iter().min().unwrap();
     println!("Minimum: {:?}", min);
+    println!("steps: {}", cnt);
 
     0
 }
