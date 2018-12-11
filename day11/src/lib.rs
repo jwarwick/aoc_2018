@@ -1,6 +1,19 @@
 extern crate util;
 
-pub fn largest_total_power(serial: isize) -> ((usize, usize), isize) {
+pub fn largest_total_power_any(serial: isize) -> ((usize, usize, usize), isize) {
+    let mut areas: Vec<(isize, (usize, usize, usize))> = Vec::with_capacity(300);
+    for size in 1..300 {
+        let (coord, power) = largest_total_power(serial, size);
+        areas.push((power, coord));
+        if power < 0 {
+            break;
+        }
+    }
+    let (power, (x, y, found_size)) = areas.iter().max().expect("Found a variable sized max power area");
+    ((*x, *y, *found_size), *power)
+}
+
+pub fn largest_total_power(serial: isize, size: usize) -> ((usize, usize, usize), isize) {
     let mut cells = [[0isize; 300]; 300];
 
     for y in 0..300 {
@@ -9,21 +22,23 @@ pub fn largest_total_power(serial: isize) -> ((usize, usize), isize) {
         }
     }
 
-    let mut areas: Vec<(isize, (usize, usize))> = Vec::with_capacity(300 * 300);
-    for y in 0..(300 - 2) {
-        for x in 0..(300-2) {
-            let total =
-                cells[x][y] + cells[x+1][y] + cells[x+2][y] +
-                cells[x][y+1] + cells[x+1][y+1] + cells[x+2][y+1] +
-                cells[x][y+2] + cells[x+1][y+2] + cells[x+2][y+2];
+    let mut areas: Vec<(isize, (usize, usize, usize))> = Vec::with_capacity(300 * 300);
+    for y in 0..(300 - (size - 1)) {
+        for x in 0..(300 - (size - 1)) {
+            let mut total: isize = 0;
+            for h in 0..size {
+                for w in 0..size {
+                    total += cells[x+w][h+y];
+                }
+            }
 
-            areas.push((total, (x, y)));
+            areas.push((total, (x, y, size)));
         }
     }
 
-    let (power, (x, y)) = areas.iter().max().expect("Found a max power area");
+    let (power, (x, y, found_size)) = areas.iter().max().expect("Found a max power area");
 
-    ((*x, *y), *power)
+    ((*x, *y, *found_size), *power)
 }
 
 fn power_level(x: usize, y: usize, serial: isize) -> isize {
@@ -50,7 +65,17 @@ mod tests {
 
     #[test]
     fn test_largest_area() {
-        assert_eq!(largest_total_power(18), ((33, 45), 29));
-        assert_eq!(largest_total_power(42), ((21, 61), 30));
+        assert_eq!(largest_total_power(18, 3), ((33, 45, 3), 29));
+        assert_eq!(largest_total_power(42, 3), ((21, 61, 3), 30));
+    }
+
+    #[test]
+    fn test_largest_variable_area() {
+        assert_eq!(largest_total_power_any(18), ((90, 269, 16), 113));
+    }
+
+    #[test]
+    fn test_largest_variable_area2() {
+        assert_eq!(largest_total_power_any(42), ((232, 251, 12), 119));
     }
 }
