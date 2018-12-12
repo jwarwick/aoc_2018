@@ -7,15 +7,16 @@ type Rule = (bool, bool, bool, bool, bool);
 type Rules = HashSet<Rule>;
 type State = HashMap<isize, bool>;
 
-pub fn plant_sum(contents: &str) -> isize {
+pub fn plant_sum(contents: &str, steps: isize) -> isize {
     let mut rules: Rules = HashSet::new();
     let mut state: State = HashMap::new();
     parse(contents, &mut rules, &mut state);
     print_state(&state);
 
-    for _s in 0..20 {
+    for s in 0..steps {
         state = step(state, &rules);
-        print_state(&state);
+        println!("Sum @ {}: {}", s, sum_state(&state));
+        //print_state(&state);
     }
     sum_state(&state)
 }
@@ -98,6 +99,6 @@ mod tests {
     fn test_input() {
         let filename = "test_input.txt";
         let contents = util::string_from_file(&filename);
-        assert_eq!(plant_sum(&contents), 325);
+        assert_eq!(plant_sum(&contents, 20), 325);
     }
 }
