@@ -11,4 +11,7 @@ fn main() {
 
     let (x, y) = day13::first_crash(&s);
     println!("Part 1 Result: {},{}", x, y);
+
+    let (x2, y2) = day13::last_crash(&s);
+    println!("Part 2 Result: {},{}", x2, y2);
 }

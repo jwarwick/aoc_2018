@@ -43,7 +43,6 @@ struct Cart {
 impl Cart {
     fn step(&self, map: &Map) -> (usize, usize, Heading, usize) {
         let curr_orient = map.get(&(self.x, self.y)).expect(&format!("Current map location {},{}", self.x, self.y));
-        println!("{}, {} = {:?} going {:?}", self.x, self.y, curr_orient, self.heading);
         let mut new_x = self.x;
         let mut new_y = self.y;
         let mut new_heading = self.heading;
@@ -126,9 +125,6 @@ impl FromStr for State {
 
         for (y, l) in s.lines().enumerate() {
             for (x, c) in l.chars().enumerate() {
-                if 0 == y {
-                    println!("{},{}: {}", x, y, c);
-                }
                 match State::parse_map(&c) {
                     Some(track) => map.insert((x, y), track),
                     None => None,
@@ -187,17 +183,22 @@ impl State {
         self.carts.sort();
         self.carts.reverse();
         for _i in 0..cart_cnt {
-            let cart = self.carts.pop().expect("Taking the first cart");
-            println!("\tCart: {:?}", cart);
-            let (x, y, heading, turn_idx) = cart.step(&self.map);
-            if self.carts.iter().any(|c| c.x == x && c.y == y) ||
-                new_carts.iter().any(|c| c.x == x && c.y == y) {
-                    crash = Some((x, y));
-                    println!("CRASH!!!!!");
-                    break;
+            match self.carts.pop() {
+                None => break,
+                Some(cart) =>
+                {
+                    let (x, y, heading, turn_idx) = cart.step(&self.map);
+                    if self.carts.iter().any(|c| c.x == x && c.y == y) ||
+                        new_carts.iter().any(|c| c.x == x && c.y == y) {
+                            crash = Some((x, y));
+                            self.carts = self.carts.iter().filter(|c| !(c.x == x && c.y == y)).cloned().collect();
+                            new_carts = new_carts.iter().filter(|c| !(c.x == x && c.y == y)).cloned().collect();
+                        } else {
+                            let turns = cart.turns.clone();
+                            new_carts.push(Cart{x, y, turn_idx, turns, heading});
+                        }
                 }
-            let turns = cart.turns.clone();
-            new_carts.push(Cart{x, y, turn_idx, turns, heading});
+            }
         }
         self.carts = new_carts;
         crash
@@ -209,8 +210,7 @@ pub fn first_crash(contents: &str) -> (usize, usize) {
     let mut crash_x = 0;
     let mut crash_y = 0;
 
-    for i in 1..1000 {
-        println!("TICK {}", i);
+    for _i in 1..1000 {
         match state.tick() {
             Some((x, y)) =>
             {
@@ -223,6 +223,22 @@ pub fn first_crash(contents: &str) -> (usize, usize) {
     }
     
     (crash_x, crash_y)
+}
+
+pub fn last_crash(contents: &str) -> (usize, usize) {
+    let mut state: State = contents.parse().expect("Read the file");
+
+    for _i in 1..100000 {
+        state.tick();
+
+        if 1 == state.carts.len() {
+            break;
+        }
+    }
+
+    assert_eq!(1, state.carts.len());
+    let c = state.carts.first().expect("Expected a cart to be left");
+    (c.x, c.y)
 }
 
 #[cfg(test)]
@@ -240,21 +256,7 @@ mod tests {
         println!("{}", contents);
         assert_eq!(first_crash(&contents), (0, 0));
     }
-//
-//    #[test]
-//    fn intersections() {
-//        let contents =
-//            "/-----\\
-//|     |
-//|  /--+--\\
-//|  |  |  |
-//\\--+--/  |
-//   |     |
-//   \\-----/";
-//        println!("{}", contents);
-//        assert_eq!(first_crash(&contents), (7, 7));
-//    }
-//
+
     #[test]
     fn straight_track() {
         let contents =
@@ -277,11 +279,11 @@ v
         assert_eq!(first_crash(&s), (7, 3));
     }
 
-    //#[test]
-    //fn part1() {
-    //    let s = fs::read_to_string("input.txt")
-    //        .expect("Something went wrong reading the input file");
-    //    println!("{}", s);
-    //    assert_eq!(first_crash(&s), (7, 3));
-    //}
+    #[test]
+    fn last_crash_example() {
+        let s = fs::read_to_string("test_input2.txt")
+            .expect("Something went wrong reading the input file");
+        println!("{}", s);
+        assert_eq!(last_crash(&s), (6, 4));
+    }
 }
