@@ -241,10 +241,11 @@ fn total_hit_points(map: &Map) -> usize {
     total
 }
 
-pub fn simulate(contents: &str) -> usize {
+pub fn simulate(contents: &str, elf_attack: &isize) -> (bool, usize) {
     let mut map: Map = HashMap::new();
     parse(contents, &mut map);
     print_map(&map);
+    let start_elf_count = get_elves(&map).or(Some(vec![])).unwrap().len();
     let mut last_round: usize = 0;
 
     'outer: for round in 1..200 {
@@ -328,12 +329,13 @@ pub fn simulate(contents: &str) -> usize {
             let mut enemy_list: Vec<(Loc, Entry)> = Vec::new();
             let mut min_health = 500;
             if !adjacent_enemies.is_empty() {
+                let mut elf_attacking = true;
                 //println!("Adjacent: {:?}", adjacent_enemies);
                 for e in adjacent_enemies {
                     let e_entry = map.get(&e).expect("Adjacent enemy");
                     let curr_health = match e_entry {
-                        Entry::Elf{hp} => hp,
-                        Entry::Goblin{hp} => hp,
+                        Entry::Elf{hp} => {elf_attacking = false; hp},
+                        Entry::Goblin{hp} => {elf_attacking = true; hp},
                         _ => &1000,
                     };
                     if *curr_health < min_health {
@@ -361,7 +363,15 @@ pub fn simulate(contents: &str) -> usize {
                 let min_health_sort = reading_order(&min_health_enemies);
                 let chosen_enemy = min_health_sort.first().expect("Lowest health enemy");
                 //println!("Chosen enemy: {:?}", chosen_enemy);
-                let new_health = min_health - ATTACK_POWER;
+                let attack_power =
+                    if elf_attacking {
+                        *elf_attack
+                    } else {
+                        ATTACK_POWER
+                    };
+
+                
+                let new_health = min_health - attack_power;
                 //println!("new health = {}", new_health);
                 if new_health <= 0 {
                     map.remove(chosen_enemy);
@@ -371,7 +381,7 @@ pub fn simulate(contents: &str) -> usize {
                     //println!("Bad guy: {:?}", *bad_guy);
                     *bad_guy = match *bad_guy {
                         Entry::Elf{hp: h} => Entry::Elf{hp: h - ATTACK_POWER},
-                        Entry::Goblin{hp: h} => Entry::Goblin{hp: h - ATTACK_POWER},
+                        Entry::Goblin{hp: h} => Entry::Goblin{hp: h - elf_attack},
                         x => x,
                     };
                 }
@@ -382,10 +392,56 @@ pub fn simulate(contents: &str) -> usize {
         //print_health(&map);
     }
 
+    let elf_count = get_elves(&map).or(Some(vec![])).unwrap().len();
+    println!("Elf count: {:?}", elf_count);
+    //let elves_left = match elf_count {
+    //    None => 0,
+    //    Some(x) => x.len(),
+    //};
+    println!("FINAL");
+    print_map(&map);
+
+
     println!("\n\nLast Round: {}", last_round);
     let total = total_hit_points(&map);
     println!("Total hit points: {}", total);
-    total * last_round
+    (elf_count == start_elf_count, total * last_round)
+}
+
+pub fn binary_search(content: &str) -> usize {
+
+    let mut low = 3;
+    let mut high = 200;
+    let mut elf_attack = 100;
+    let mut totals: HashMap<isize, (bool, usize)> = HashMap::new();
+    for _i in 0..10 
+    {
+        println!("Trying elf attack {}", elf_attack);
+        let (all_survived, curr_total) = simulate(content, &elf_attack);
+        println!("All survived: {}, Elf attack: {}", all_survived, elf_attack);
+        totals.insert(elf_attack, (all_survived, curr_total));
+        if !all_survived {
+            low = elf_attack;
+            elf_attack += (high - elf_attack)/2;
+        } else {
+            high = elf_attack;
+            elf_attack -= (elf_attack - low)/2;
+        }
+        println!("Updated to {} {} {}\n\n", low, elf_attack, high);
+
+        if totals.contains_key(&elf_attack) {
+            break;
+        }
+    }
+    println!("Totals: {:#?}", totals);
+    let filtered: Vec<_> = totals.iter().filter(|(_k, (survived, _val))| *survived).collect();
+    println!("Filtered: {:?}", filtered);
+    let mut ordered: Vec<_> = filtered.iter().cloned().map(|(k, (_survived, val))| (k, val)).collect();
+    ordered.sort();
+    println!("Ordered: {:?}", ordered);
+    let (attack, total) = ordered.first().unwrap();
+    println!("Attack: {}, Total: {}", attack, total);
+    **total as usize
 }
 
 #[cfg(test)]
@@ -424,52 +480,47 @@ mod tests {
     //    assert_eq!(simulate(&contents), 1);
     //}
 
-    #[test]
-    fn sample_combat() {
-        let filename = "sample_combat.txt";
-        let contents = util::string_from_file(&filename);
-        assert_eq!(simulate(&contents), 27730);
-    }
+    //#[test]
+    //fn sample_combat() {
+    //    let filename = "sample_combat.txt";
+    //    let contents = util::string_from_file(&filename);
+    //    assert_eq!(simulate(&contents), 27730);
+    //}
 
-    #[test]
-    fn combat1() {
-        let filename = "combat1.txt";
-        let contents = util::string_from_file(&filename);
-        assert_eq!(simulate(&contents), 36334);
-    }
+    //#[test]
+    //fn combat1() {
+    //    let filename = "combat1.txt";
+    //    let contents = util::string_from_file(&filename);
+    //    assert_eq!(binary_search(&contents), 4988);
+    //}
 
     #[test]
     fn combat2() {
         let filename = "combat2.txt";
         let contents = util::string_from_file(&filename);
-        assert_eq!(simulate(&contents), 39514);
+        assert_eq!(binary_search(&contents), 31284);
     }
 
     #[test]
     fn combat3() {
         let filename = "combat3.txt";
         let contents = util::string_from_file(&filename);
-        assert_eq!(simulate(&contents), 27755);
+        assert_eq!(binary_search(&contents), 3478);
     }
 
     #[test]
     fn combat4() {
         let filename = "combat4.txt";
         let contents = util::string_from_file(&filename);
-        assert_eq!(simulate(&contents), 28944);
+        assert_eq!(binary_search(&contents), 6474);
     }
 
     #[test]
     fn combat5() {
         let filename = "combat5.txt";
         let contents = util::string_from_file(&filename);
-        assert_eq!(simulate(&contents), 18740);
+        assert_eq!(binary_search(&contents), 1140);
     }
 
-    //#[test]
-    //fn part1_test() {
-    //    let filename = "input.txt";
-    //    let contents = util::string_from_file(&filename);
-    //    assert_eq!(simulate(&contents), 7);
-    //}
+
 }
