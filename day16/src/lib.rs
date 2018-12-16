@@ -1,6 +1,9 @@
 extern crate util;
 #[macro_use] extern crate scan_fmt;
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+
 type Instruction = [i32; 4];
 type Registers = [i32; 4];
 
@@ -140,7 +143,8 @@ fn eqrr(instruction: &Instruction, registers: &mut Registers) {
             0
         };
 }
-pub fn count_multiples(content: &str) -> usize {
+
+pub fn count_multiples(content: &str, content2: &str) -> (usize, i32) {
     let mut inputs: Vec<Input> = Vec::new();
     let lines: Vec<_> = content.lines().collect();
     for i in lines.chunks(4) {
@@ -153,14 +157,19 @@ pub fn count_multiples(content: &str) -> usize {
         vec![addr, addi, mulr, muli, banr, bani, borr, bori,
         setr, seti, gtir, gtri, gtrr, eqir, eqri, eqrr];
 
+    let mut non_match: HashMap<usize, HashSet<i32>> = HashMap::new();
+
     let mut result: usize = 0;
-    for i in inputs {
+    for input in inputs {
         let mut local_match = 0;
-        for f in funcs.iter() {
-            let mut registers = i.before.clone();
-            f(&i.instruction, &mut registers);
-            if registers == i.after {
+        for (idx, f) in funcs.iter().enumerate() {
+            let mut registers = input.before.clone();
+            f(&input.instruction, &mut registers);
+            if registers == input.after {
                 local_match += 1;
+            } else {
+                let set = non_match.entry(idx).or_insert(HashSet::new());
+                set.insert(input.instruction[0]);
             }
         }
         if local_match >= 3 {
@@ -168,7 +177,45 @@ pub fn count_multiples(content: &str) -> usize {
         }
     }
 
-    result
+    let mut all_opcodes: HashSet<i32> = HashSet::new();
+    for i in 0..16 {
+        all_opcodes.insert(i);
+    }
+
+    let mut matches: HashMap<i32, usize> = HashMap::new();
+    let mut curr_info: Vec<_> = Vec::new();
+    for (ck, cv) in non_match {
+        curr_info.push((ck.clone(), cv.clone()));
+    }
+
+    while !curr_info.is_empty() {
+        curr_info.sort_by(|(_k1, s1), (_k2, s2)| s1.len().cmp(&s2.len()));
+        curr_info.reverse();
+        let (k, val_set) = curr_info.remove(0);
+        let opcode_diff: Vec<_> = all_opcodes.difference(&val_set).collect();
+        let opcode = opcode_diff.first().expect("First opcode");
+        let mut new_info: Vec<_> = Vec::new();
+        for (ck, cv) in curr_info {
+            let mut cv_clone = cv.clone();
+            cv_clone.insert(**opcode);
+            new_info.push((ck.clone(), cv_clone.clone()));
+        }
+        curr_info = new_info;
+        matches.insert(**opcode, k);
+    }
+
+    let mut regs: Registers = [0, 0, 0, 0];
+    for l in content2.lines() {
+        let (i1, i2, i3, i4) = scan_fmt!(l,
+                                         "{d} {d} {d} {d}",
+                                         i32, i32, i32, i32);
+        let instruction = [i1.unwrap(), i2.unwrap(), i3.unwrap(), i4.unwrap()];
+        let offset = matches[&instruction[0]];
+        let f = funcs[offset];
+        f(&instruction, &mut regs);
+    }
+
+    (result, regs[0])
 }
 
 #[cfg(test)]
@@ -176,12 +223,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_sample() {
-        let contents = "Before: [3, 2, 1, 1]
-9 2 1 2
-After:  [3, 2, 2, 1]";
-        assert_eq!(count_multiples(&contents), 1);
-    }
+//    fn test_sample() {
+//        let contents = "Before: [3, 2, 1, 1]
+//9 2 1 2
+//After:  [3, 2, 2, 1]";
+//        assert_eq!(count_multiples(&contents), 1);
+//    }
 
     #[test]
     fn test_addi() {
