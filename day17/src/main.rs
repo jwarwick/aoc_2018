@@ -4,7 +4,8 @@ extern crate util;
 use std::collections::HashMap;
 
 fn main() {
-    let contents = util::string_from_file("input.txt");
+    let filename = util::get_argument("input.txt");
+    let contents = util::string_from_file(&filename);
 
     let result1 = gravity_fill(&contents);
     println!("Part 1 Result: {}", result1);
@@ -14,7 +15,7 @@ fn gravity_fill(contents: &str) -> usize {
     let mut scan = Scan::new(&contents);
     println!("{}, {}", scan.min_y, scan.max_y);
     scan.fill();
-    scan.print();
+    //scan.print();
     scan.reachable()
 }
 
@@ -24,29 +25,13 @@ enum Type {
     Clay,
     DrySand,
     StandingWater,
-    WetSand(isize, isize),
+    WetSand,
     Invalid,
 }
 
 impl Type {
     fn is_wet(&self) -> bool {
-        match self {
-            Type::WetSand(_x, _y) => true,
-            Type::StandingWater => true,
-            _ => false
-        }
-    }
-
-    fn wet_or_wall(&self) -> bool {
-        match self {
-            Type::WetSand(_x, _y) => true,
-            Type::Clay => true,
-            _ => false
-        }
-    }
-
-    fn dry_or_wall(&self) -> bool {
-        *self == Type::DrySand || *self == Type::Clay
+        *self == Type::WetSand || *self == Type::StandingWater
     }
 }
 
@@ -84,84 +69,70 @@ impl Scan {
 
     fn fill(&mut self) {
         let start = Loc{x: 500, y:0};
-        self.squares.insert(start, Type::WetSand(start.x, start.y));
-        let mut to_visit: Vec<(Loc, Option<Loc>)> = vec![(start, Some(start))];
+        self.squares.insert(start, Type::WetSand);
+        let mut to_visit: Vec<Loc> = vec![start];
 
-        let mut cnt = 0;
-        while !to_visit.is_empty() { // && cnt < 1000 {
-            //println!("\n\n\nList: {:?}", to_visit);
-            cnt += 1;
-            let (curr, parent) = to_visit.pop().expect("A value on the visit list");
-            let (_curr_loc, curr_type) = self.get_loc(&curr);
-            if curr_type == Type::StandingWater {
-                continue;
-            }
+        while !to_visit.is_empty() {
+            let curr = to_visit.pop().expect("A value on the visit list");
             let (down, down_type) = self.down(&curr);
-            //println!("\n\nCurr: {:?}", curr);
-            //println!("Down type: {:?}", down_type);
-            //self.print();
 
             if down_type == Type::DrySand {
-                to_visit.push((curr, parent));
-                to_visit.push((down, Some(curr)));
-                self.squares.insert(down, Type::WetSand(curr.x, curr.y));
-
-            } else if down_type == Type::WetSand(curr.x, curr.y) {
-                let (_left, down_left_type) = self.left(&down);
-                let (_right, down_right_type) = self.right(&down);
-
-                if Type::wet_or_wall(&down_right_type) && Type::wet_or_wall(&down_left_type) {
-                    //println!("Making wet");
-                    self.squares.insert(down, Type::StandingWater);
-                    self.make_left_wet(&down);
-                    self.make_right_wet(&down);
-                    to_visit.push((curr, parent));
-                }
-
-            } else if down_type == Type::Invalid {
-                //println!("Filtering...");
-                //println!("Parent = {:?}", parent);
-                let mut to_remove = vec![parent];
-                while !to_remove.is_empty() {
-                    //println!("Remove list: {:?}", to_remove);
-                    let next_remove = to_remove.pop().expect("Removable node to pop");
-                    //println!("Removing node {:?}", next_remove);
-                    if None != next_remove {
-                        let parent_branch = next_remove.expect("Parent branch");
-                        let nodes_remove: Vec<_> = to_visit.iter().cloned().filter(|(l, _b)| *l == parent_branch).collect();
-                        let mut parent_removes: Vec<_> = nodes_remove.iter().cloned().map(|(_l, p)| p).collect();
-                        to_remove.append(&mut parent_removes);
-
-                        to_visit = to_visit.iter().cloned().filter(|(l, _b)| *l != parent_branch).collect();
-                    }
-                }
-
+                self.squares.insert(down, Type::WetSand);
+                to_visit.push(curr);
+                to_visit.push(down);
             } else if down_type == Type::Clay || down_type == Type::StandingWater {
-                //println!("Hit clay or water");
-
-                let (left, left_type) = self.left(&curr);
-                let (right, right_type) = self.right(&curr);
-                let parent_val = parent.unwrap();
-
-                if left_type == Type::DrySand {
-                    //println!("Pushing left");
-                    to_visit.push((left, parent));
-                    self.squares.insert(left, Type::WetSand(parent_val.x, parent_val.y));
-                }
-
-                if right_type == Type::DrySand {
-                    //println!("Pushing right");
-                    to_visit.push((right, parent));
-                    self.squares.insert(right, Type::WetSand(parent_val.x, parent_val.y));
+                let (can_fill_left, left_end) = self.check_left(&curr);
+                let (can_fill_right, right_end) = self.check_right(&curr);
+                if can_fill_left && can_fill_right {
+                    self.make_row_wet(&curr);
+                } else {
+                    if None != right_end {
+                        let drip = right_end.expect("Right drip");
+                        to_visit.push(drip);
+                    }
+                    if None != left_end {
+                        let drip = left_end.expect("Left drip");
+                        to_visit.push(drip);
+                    }
                 }
             }
         }
     }
 
+    fn check_left(&mut self, curr: &Loc) -> (bool, Option<Loc>) {
+        self.check_end(&curr, -1)
+    }
+
+    fn check_right(&mut self, curr: &Loc) -> (bool, Option<Loc>) {
+        self.check_end(&curr, 1)
+    }
+
+    fn check_end(&mut self, curr: &Loc, step: isize) -> (bool, Option<Loc>) {
+        let new_loc = Loc{x: curr.x+step, y: curr.y};
+        let (new_loc, kind) = self.get_loc(&new_loc);
+        if kind == Type::Clay {
+            return (true, None);
+        }
+        self.squares.insert(new_loc, Type::WetSand);
+        let (_new_down, down_kind) = self.down(&new_loc);
+        if down_kind == Type::DrySand {
+            return (false, Some(new_loc));
+        } else if down_kind == Type::WetSand {
+            return (false, None);
+        }
+        self.check_end(&new_loc, step)
+    }
+
+    fn make_row_wet(&mut self, loc: &Loc) {
+        self.squares.insert(*loc, Type::StandingWater);
+        self.make_left_wet(&loc);
+        self.make_right_wet(&loc);
+    }
+
     fn make_left_wet(&mut self, loc: &Loc) {
         let (left_loc, kind) = self.left(loc);
         match kind {
-            Type::WetSand(_x, _y) => {
+            Type::WetSand => {
                 self.squares.insert(left_loc, Type::StandingWater);
                 self.make_left_wet(&left_loc);
             },
@@ -172,7 +143,7 @@ impl Scan {
     fn make_right_wet(&mut self, loc: &Loc) {
         let (right_loc, kind) = self.right(loc);
         match kind {
-            Type::WetSand(_x, _y) => {
+            Type::WetSand => {
                 self.squares.insert(right_loc, Type::StandingWater);
                 self.make_right_wet(&right_loc);
             },
@@ -195,11 +166,6 @@ impl Scan {
         self.get_loc(&new_loc)
     }
 
-    fn up(&self, loc: &Loc) -> (Loc, Type) {
-        let new_loc = Loc{x: loc.x, y: loc.y-1};
-        self.get_loc(&new_loc)
-    }
-
     fn get_loc(&self, loc: &Loc) -> (Loc, Type) {
         if loc.y > self.max_y {
             return (*loc, Type::Invalid);
@@ -211,12 +177,6 @@ impl Scan {
             Some(t) => (*loc, *t),
         }
     }
-
-    //fn reachable(&self) -> usize {
-    //    let vals: Vec<Type> = self.squares.values().cloned().collect();
-    //    let filtered: Vec<Type> = vals.iter().filter(|t| t.is_wet()).cloned().collect();
-    //    filtered.len()
-    //}
 
     fn reachable(&self) -> usize {
         let vals: Vec<_> = self.squares.iter().filter(|(_l, t)| t.is_wet()).collect();
@@ -268,7 +228,7 @@ impl Scan {
                     match self.squares.get(&Loc{x,y}) {
                         Some(Type::Source) => '+',
                         Some(Type::DrySand) => '.',
-                        Some(Type::WetSand(_x, _y)) => '|',
+                        Some(Type::WetSand) => '|',
                         Some(Type::Clay) => '#',
                         Some(Type::StandingWater) => '~',
                         _ => '.'
@@ -290,18 +250,6 @@ mod tests {
     fn test_sample1() {
         let contents = util::string_from_file(TEST_FILE);
         assert_eq!(gravity_fill(&contents), 57);
-    }
-
-    #[test]
-    fn test_sample2() {
-        let contents = util::string_from_file("test_input2.txt");
-        assert_eq!(gravity_fill(&contents), 53);
-    }
-
-    #[test]
-    fn test_sample3() {
-        let contents = util::string_from_file("test_input3.txt");
-        assert_eq!(gravity_fill(&contents), 53);
     }
 
     #[test]
