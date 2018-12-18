@@ -7,16 +7,17 @@ fn main() {
     let filename = util::get_argument("input.txt");
     let contents = util::string_from_file(&filename);
 
-    let result1 = gravity_fill(&contents);
+    let (result1, result2) = gravity_fill(&contents);
     println!("Part 1 Result: {}", result1);
+    println!("Part 2 Result: {}", result2);
 }
 
-fn gravity_fill(contents: &str) -> usize {
+fn gravity_fill(contents: &str) -> (usize, usize) {
     let mut scan = Scan::new(&contents);
     println!("{}, {}", scan.min_y, scan.max_y);
     scan.fill();
     //scan.print();
-    scan.reachable()
+    (scan.reachable(), scan.standing_water())
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -184,6 +185,12 @@ impl Scan {
         filtered.len()
     }
 
+    fn standing_water(&self) -> usize {
+        let vals: Vec<_> = self.squares.iter().filter(|(_l, t)| **t == Type::StandingWater).collect();
+        let filtered: Vec<_> = vals.iter().filter(|(l, _t)| l.y <= self.max_y && l.y >= self.min_y).collect();
+        filtered.len()
+    }
+
     fn x_range(&self) -> (isize, isize) {
         let keys = self.squares.keys();
         let xs: Vec<_> = keys.map(|l| l.x).collect();
@@ -249,7 +256,7 @@ mod tests {
     #[test]
     fn test_sample1() {
         let contents = util::string_from_file(TEST_FILE);
-        assert_eq!(gravity_fill(&contents), 57);
+        assert_eq!(gravity_fill(&contents), (57, 29));
     }
 
     #[test]
