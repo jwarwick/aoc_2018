@@ -1,19 +1,54 @@
 extern crate util;
 
+use std::collections::HashSet;
+
 fn main() {
     let contents = util::string_from_file("input.txt");
 
-    let result1 = simulate(&contents, 50);
+    let result1 = simulate(&contents, 10, 50);
     println!("Part 1 Result: {}", result1);
+
+    let result2 = simulate(&contents, 1000000000, 50);
+    println!("Part 2 Result: {}", result2);
 }
 
-fn simulate(contents: &str, size: isize) -> usize {
+fn simulate(contents: &str, steps: usize, size: isize) -> usize {
     let mut grid = Grid::new(&contents, size);
-    for _i in 1..=10 {
+    let mut counts: HashSet<usize> = HashSet::new();
+    let mut values: Vec<(usize, usize)> = Vec::new();
+    let mut do_capture = false;
+    for i in 1..=steps {
         grid.step();
+        if i > 5000 {
+            let value = grid.resource_value();
+            if do_capture {
+                values.push((i, value));
+            }
+
+            if !counts.contains(&value) {
+                counts.insert(value);
+            } else {
+                if do_capture {
+                    break;
+                }
+                do_capture = true;
+                
+                counts.clear();
+                counts.insert(value);
+            }
+        }
     }
-    grid.print();
-    grid.resource_value()
+    if steps > 1000 {
+        let (i, v) = values.remove(0);
+        values.insert(0, (i, v));
+        let rem = steps - i;
+        let offset = rem % values.len();
+        let (_i, result) = values[offset];
+        result
+    } else {
+        grid.print();
+        grid.resource_value()
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -168,6 +203,6 @@ mod tests {
     #[test]
     fn test_sample1() {
         let contents = util::string_from_file(TEST_FILE);
-        assert_eq!(simulate(&contents, 10), 1147);
+        assert_eq!(simulate(&contents, 10, 10), 1147);
     }
 }
