@@ -3,8 +3,24 @@ extern crate util;
 fn main() {
     let contents = util::string_from_file("input.txt");
 
-    let result1 = background_process(&contents);
+    let result1 = background_process(&contents, [0; 6]);
     println!("Part 1 Result: {}", result1);
+
+    let c1 = compute(919);
+    println!("Part 1 Computed: {}", c1);
+
+    let c2 = compute(10551319);
+    println!("Part 2 Computed: {}", c2);
+}
+
+fn compute(input: isize) -> isize {
+    let mut result: isize = 0;
+    for i in 1 ..= input {
+        if input % i == 0 {
+            result = result + i;
+        }
+    }
+    result
 }
 
 type Instruction = (OpCode, i32, i32, i32);
@@ -230,9 +246,9 @@ impl Device {
     }
 }
 
-fn background_process(contents: &str) -> i32 {
+fn background_process(contents: &str, registers: [i32; 6]) -> i32 {
     let mut device = Device::load(contents);
-    println!("Device: {:?}", device);
+    device.registers = registers;
     device.execute();
     device.registers[0]
 }
@@ -252,7 +268,7 @@ setr 1 0 0
 seti 8 0 4
 seti 9 0 5";
 
-        assert_eq!(background_process(&contents), 6);
+        assert_eq!(background_process(&contents, [0; 6]), 6);
     }
 
     #[test]
