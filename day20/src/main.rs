@@ -5,8 +5,9 @@ use std::collections::VecDeque;
 fn main() {
     let contents = util::string_from_file("input.txt");
 
-    let result1 = shortest_path(&contents);
+    let (result1, result2) = shortest_path(&contents);
     println!("Part 1 Result: {}", result1);
+    println!("Part 2 Result: {}", result2);
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -88,6 +89,21 @@ impl Map {
     }
 
     fn furthest_room(&mut self, start: &Loc) -> usize {
+        let mut flat = self.room_distances(start);
+        flat.sort();
+        flat.reverse();
+        *flat.first().expect("A furthest node")
+    }
+
+    fn min_distance(&mut self, start: &Loc, min: usize) -> usize {
+        let mut flat = self.room_distances(start);
+        flat = flat.iter().cloned().filter(|x| *x >= min).collect();
+        flat.sort();
+        flat.reverse();
+        flat.len()
+    }
+
+    fn room_distances(&mut self, start: &Loc) -> Vec<usize> {
         let mut distances: HashMap<Loc, usize> = HashMap::new();
         distances.insert(*start, 0);
         let mut to_visit: VecDeque<(Loc, usize)> = VecDeque::new();
@@ -106,10 +122,8 @@ impl Map {
             }
         }
         
-        let mut flat: Vec<_> = distances.iter().map(|(_l, d)| d).collect();
-        flat.sort();
-        flat.reverse();
-        **flat.first().expect("A furthest node")
+        let flat: Vec<_> = distances.iter().map(|(_l, d)| d).cloned().collect();
+        flat
     }
 
     fn neighbors(&mut self, curr: &Loc) -> Vec<Loc> {
@@ -198,10 +212,13 @@ impl Map {
     }
 }
 
-fn shortest_path(contents: &str) -> usize {
+fn shortest_path(contents: &str) -> (usize, usize) {
     let mut map = Map::build(contents);
     map.print();
-    map.furthest_room(&Loc{x: 0, y: 0})
+    let start = Loc{x: 0, y: 0};
+    let result1 = map.furthest_room(&start);
+    let result2 = map.min_distance(&start, 1000);
+    (result1, result2)
 }
 
 #[cfg(test)]
@@ -211,30 +228,30 @@ mod tests {
     #[test]
     fn simple() {
         let contents = "^WNE$";
-        assert_eq!(shortest_path(&contents), 3);
+        assert_eq!(shortest_path(&contents), (3, 0));
     }
 
     #[test]
     fn alternates_paths() {
         let contents = "^ENWWW(NEEE|SSE(EE|N))$";
-        assert_eq!(shortest_path(&contents), 10);
+        assert_eq!(shortest_path(&contents), (10, 0));
     }
 
     #[test]
     fn empty_options() {
         let contents = "^ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN$";
-        assert_eq!(shortest_path(&contents), 18);
+        assert_eq!(shortest_path(&contents), (18, 0));
     }
 
     #[test]
     fn longer() {
         let contents = "^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$";
-        assert_eq!(shortest_path(&contents), 23);
+        assert_eq!(shortest_path(&contents), (23, 0));
     }
 
     #[test]
     fn longest() {
         let contents = "^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$";
-        assert_eq!(shortest_path(&contents), 31);
+        assert_eq!(shortest_path(&contents), (31, 0));
     }
 }
