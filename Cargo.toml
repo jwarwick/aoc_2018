@@ -2,6 +2,7 @@
 
 members = [
     "util",
+    "device",
     "day01",
     "day02",
     "day03",
@@ -22,4 +23,5 @@ members = [
     "day18",
     "day19",
     "day20",
+    "day21",
 ]
