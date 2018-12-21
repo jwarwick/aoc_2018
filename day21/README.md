@@ -30,4 +30,4 @@ In order to determine the timing window for your underflow exploit, you also nee
 
 What is the lowest non-negative integer value for register 0 that causes the program to halt after executing the most instructions? (The program must actually halt; running forever does not count as halting.)
 
-Answer: **13599657**
+Answer: **13599657** (In the emulator, capture all values compared against the input. Print the one before the first duplicated value.)
