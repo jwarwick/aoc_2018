@@ -344,6 +344,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "day22"
+version = "0.1.0"
+dependencies = [
+ "util 0.1.0",
+]
+
+[[package]]
 name = "device"
 version = "0.1.0"
 
