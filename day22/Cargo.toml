@@ -5,3 +5,4 @@ authors = ["John Warwick <jwarwick@gmail.com>"]
 
 [dependencies]
 util = {path = "../util"}
+petgraph = "0.4.13"
