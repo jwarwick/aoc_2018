@@ -94,3 +94,8 @@ The reindeer bumps the device with its nose.
 
 "Energy required: 49 stars."
 
+<After getting 49 stars>
+
+You use all fifty stars to activate the underflow. As you begin to fall, the little reindeer looks up at you; its nose begins to glow red.
+
+You go back in time so far that you wrap around and end up back in your own time again! Oddly, history books contain some new details that you don't recognize...
