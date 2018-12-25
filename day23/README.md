@@ -70,4 +70,4 @@ Many coordinates are in range of some of the nanobots in this formation. However
 
 Find the coordinates that are in range of the largest number of nanobots. What is the shortest manhattan distance between any of those points and 0,0,0?
 
-Answer: 
+Answer: **107272899**

@@ -23,6 +23,23 @@ fn in_range(content: &str) -> usize {
     close.len()
 }
 
+fn z3_in_range<'a>(ctx: &'a Context, x: &'a Ast, y: &'a Ast, z: &'a Ast, bot: &Bot) -> Ast<'a> {
+    let bot_x = ctx.from_i64(bot.loc.x as i64);
+    let bot_y = ctx.from_i64(bot.loc.y as i64);
+    let bot_z = ctx.from_i64(bot.loc.z as i64);
+    let bot_range = ctx.from_i64(bot.range as i64);
+    let delta_x = x.sub(&vec![&bot_x]);
+    let delta_y = y.sub(&vec![&bot_y]);
+    let delta_z = z.sub(&vec![&bot_z]);
+    let zero = ctx.from_i64(0);
+    let neg_one = ctx.from_i64(-1);
+    let abs_x = delta_x.lt(&zero).ite(&delta_x.mul(&vec![&neg_one]), &delta_x);
+    let abs_y = delta_y.lt(&zero).ite(&delta_y.mul(&vec![&neg_one]), &delta_y);
+    let abs_z = delta_z.lt(&zero).ite(&delta_z.mul(&vec![&neg_one]), &delta_z);
+    let sum = abs_x.add(&vec![&abs_y, &abs_z]);
+    bot_range.ge(&sum)
+}
+
 fn dist_to_center(content: &str) -> usize {
     let (_largest, bots) = build_list(&content);
 
@@ -32,11 +49,16 @@ fn dist_to_center(content: &str) -> usize {
     let y = ctx.named_int_const("y");
     let z = ctx.named_int_const("z");
 
-    let optimizer = Optimize::new(&ctx);
 
+    let mut costs: Vec<Ast> = Vec::new();
+    let one = ctx.from_i64(1);
+    let zero = ctx.from_i64(0);
     for b in bots {
-        
+        let c = z3_in_range(&ctx, &x, &y, &z, &b);
+        costs.push(c.ite(&one, &zero));
     }
+    let optimizer = Optimize::new(&ctx);
+    optimizer.maximize(&ctx.from_i64(0).add(&costs.iter().collect::<Vec<&Ast>>()));
 
     let check = optimizer.check();
     if !check {
@@ -51,7 +73,9 @@ fn dist_to_center(content: &str) -> usize {
         println!("x: {}", xv);
         println!("y: {}", yv);
         println!("z: {}", zv);
-        1
+        let point = Loc{x: xv as isize, y: yv as isize, z: zv as isize};
+        let origin = Loc{x: 0, y: 0, z: 0};
+        point.dist(&origin)
     }
 }
 
