@@ -6,23 +6,46 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 fn main() {
     let armies = build_armies();
-    let result1 = remaining_units(&armies);
-    println!("Part 1 Result: {}", result1);
+    let [imm1, infc1] = remaining_units(&armies, 0);
+    println!("Part 1 Result: {}", imm1 + infc1);
 
-//    let result2 = dist_to_center(&content);
-//    println!("Part 2 Result: {}", result2);
+    let result2 = boost(&armies);
+    println!("Part 2 Result: {}", result2);
 }
 
-fn remaining_units((immune, infection): &(Army, Army)) -> usize {
+fn boost((immune, infection): &(Army, Army)) -> usize {
+    for i in 1..1_000_000 {
+        println!("Trying boost {}", i);
+        let [immune_left, infect_left] = remaining_units(&(immune.clone(), infection.clone()), i);
+        if immune_left > 0 && infect_left == 0 {
+            return immune_left;
+        }
+    }
+    0
+}
+
+fn remaining_units((immune, infection): &(Army, Army), boost: isize) -> [usize; 2] {
     let mut immc = immune.clone();
     let mut infc = infection.clone();
     immc.append(&mut infc);
     let mut all: HashMap<isize, Group> = immc.iter().cloned().map(|a| (a.initiative, a)).collect();
 
+    for (_, e) in all.iter_mut() {
+        if e.side == Side::Immune {
+            e.attack_damage = e.attack_damage + boost;
+        }
+    }
+
     let mut rem_immune = get_groups(Side::Immune, &all);
     let mut rem_infect = get_groups(Side::Infection, &all);
 
-    while rem_immune.len() != 0 && rem_infect.len() != 0 {
+    let mut last_cnts: (isize, isize) = (0, 0);
+
+    while rem_immune.len() != 0 && rem_infect.len() != 0
+        && last_cnts != units_left(&all)
+        {
+            last_cnts = units_left(&all);
+
         let order = selection_order(&all);
         let mut attacks: HashMap<isize, isize> = HashMap::new();
 
@@ -38,8 +61,8 @@ fn remaining_units((immune, infection): &(Army, Army)) -> usize {
             for enemy_idx in enemies.iter() {
                 let enemy = &all[enemy_idx];
                 let dmg = curr.potential_damage(enemy);
-                println!("{:?} {} {} would deal {:?} {} {}  {} damage", curr.side, curr.units, curr.initiative,
-                         enemy.side, enemy.units, enemy.initiative, dmg);
+                //println!("{:?} {} {} would deal {:?} {} {}  {} damage", curr.side, curr.units, curr.initiative,
+                //         enemy.side, enemy.units, enemy.initiative, dmg);
                 if dmg > max_damage {
                     max_damage = dmg;
                     best = Some(enemy);
@@ -83,8 +106,8 @@ fn remaining_units((immune, infection): &(Army, Army)) -> usize {
                                 Occupied(entry) => entry.into_mut(),
                             };
                             let dmg = curr.potential_damage(&enemy);
-                            println!("{:?} {} {} deals {:?} {} {}  {} damage", curr.side, curr.units, curr.initiative,
-                                     enemy.side, enemy.units, enemy.initiative, dmg);
+                            //println!("{:?} {} {} deals {:?} {} {}  {} damage", curr.side, curr.units, curr.initiative,
+                            //         enemy.side, enemy.units, enemy.initiative, dmg);
                             if enemy.apply_damage(dmg) {
                                 delete = Some(enemy.initiative);
                             }
@@ -100,11 +123,22 @@ fn remaining_units((immune, infection): &(Army, Army)) -> usize {
 
         rem_immune = get_groups(Side::Immune, &all);
         rem_infect = get_groups(Side::Infection, &all);
-        println!("-------------------");
     }
 
-    let s: isize = all.values().map(|a| a.units).sum();
-    s as usize
+    let (immune_left, infect_left) = units_left(&all);
+    [immune_left as usize, infect_left as usize]
+}
+
+fn units_left(map: &HashMap<isize, Group>) -> (isize, isize) {
+    let mut immune_left = 0;
+    let mut infect_left = 0;
+    for v in map.values() {
+        match v.side {
+            Side::Infection => infect_left = infect_left + v.units,
+            Side::Immune => immune_left = immune_left + v.units,
+        }
+    }
+    (immune_left, infect_left)
 }
 
 fn selection_order(map: &HashMap<isize, Group>) -> Vec<isize> {
@@ -192,7 +226,7 @@ impl Group {
 
     fn apply_damage(&mut self, dmg: isize) -> bool {
         let num = dmg / self.hit_points;
-        println!("Kills {} units", num);
+        //println!("Kills {} units", num);
         self.units = self.units - num;
         self.units <= 0
     }
@@ -234,9 +268,16 @@ mod tests {
     }
 
     #[test]
-    fn radius_test() {
+    fn part1_test() {
         let armies = build_sample_data();
-        assert_eq!(remaining_units(&armies), 5216);
+        assert_eq!(remaining_units(&armies, 0), [0, 5216]);
     }
+
+    #[test]
+    fn part2_test() {
+        let armies = build_sample_data();
+        assert_eq!(boost(&armies), 51);
+    }
+
 
 }
